@@ -1,0 +1,34 @@
+{
+  "dates": ["2025-10-22"],
+  "meals": [
+    {
+      "meal_name": "Breakfast",
+      "meal_time": "09:00",
+      "meridiem": "AM"
+    }
+  ],
+  "number_of_meals": 1,
+  "meal_style_option": "some_variety",
+  "treat_meals": {
+    "is_selected": false,
+    "entries": []
+  },
+  "social_meals": {
+    "is_selected": false,
+    "entries": []
+  },
+  "is_drinks": false,
+  "drink_entries": [],
+  "macro_target": {
+    "calories": 500,
+    "carbs": 50,
+    "fats": 20,
+    "proteins": 25
+  },
+  "diet_type": "Flexible",
+  "cuisines": [],
+  "foods_to_avoid": [],
+  "kitchen_tools": [],
+  "life_phases": [],
+  "foods_to_like": ["Oatmeal", "Banana"]
+}

@@ -1,0 +1,135 @@
+[
+  {
+    "dates": [
+      "2025-10-27",
+      "2025-10-28",
+      "2025-10-29",
+      "2025-10-30",
+      "2025-10-31",
+      "2025-11-01",
+      "2025-11-02"
+    ],
+    "meals": [
+      { "meal_name": "Breakfast", "meal_time": "09:00", "meridiem": "AM" },
+      { "meal_name": "Lunch", "meal_time": "02:00", "meridiem": "PM" },
+      { "meal_name": "Dinner", "meal_time": "08:00", "meridiem": "PM" },
+      { "meal_name": "Snacks", "meal_time": "12:00", "meridiem": "PM" }
+    ],
+    "number_of_meals": 4,
+    "meal_style_option": "three_four_rotation",
+    "treat_meals": { "is_selected": false, "entries": [] },
+    "social_meals": { "is_selected": false, "entries": [] },
+    "is_drinks": false,
+    "drink_entries": [],
+    "macro_target": {
+      "calories": 2128.5,
+      "carbs": 212.85,
+      "fats": 70.95,
+      "proteins": 159.64
+    },
+    "diet_type": "Vegetarian",
+    "cuisines": [],
+    "foods_to_avoid": [
+      "Almonds",
+      "Eggs",
+      "Cashews",
+      "Fish (salmon, tuna, cod)",
+      "Hazelnuts",
+      "Macadamia",
+      "Milk",
+      "Peanuts"
+    ],
+    "kitchen_tools": [
+      "Blender",
+      "Food Processor",
+      "Slow Cooker",
+      "Toaster Oven",
+      "Grill",
+      "Steamer",
+      "Waffle Maker"
+    ],
+    "life_phases": ["None of these apply"],
+    "foods_to_like": []
+  },
+  {
+    "dates": ["2025-10-21"],
+    "meals": [
+      { "meal_name": "Breakfast", "meal_time": "09:00", "meridiem": "AM" },
+      { "meal_name": "Lunch", "meal_time": "02:00", "meridiem": "PM" },
+      { "meal_name": "Dinner", "meal_time": "08:00", "meridiem": "PM" }
+    ],
+    "number_of_meals": 3,
+    "meal_style_option": "same_every_day",
+    "treat_meals": { "is_selected": false, "entries": [] },
+    "social_meals": { "is_selected": false, "entries": [] },
+    "is_drinks": false,
+    "drink_entries": [],
+    "macro_target": {
+      "calories": 2128.5,
+      "carbs": 212.85,
+      "fats": 70.95,
+      "proteins": 159.64
+    },
+    "diet_type": "Flexible",
+    "cuisines": [],
+    "foods_to_avoid": ["Almonds"],
+    "kitchen_tools": [
+      "Blender",
+      "Food Processor",
+      "Slow Cooker",
+      "Instant Pot/Pressure Cooker",
+      "Air Fryer",
+      "Stove Top",
+      "Oven",
+      "Toaster Oven",
+      "Grill",
+      "Steamer",
+      "Waffle Maker"
+    ],
+    "life_phases": ["None of these apply"],
+    "foods_to_like": []
+  },
+  {
+    "dates": ["2025-10-22"],
+    "meals": [
+      { "meal_name": "Breakfast", "meal_time": "09:00", "meridiem": "AM" },
+      { "meal_name": "Lunch", "meal_time": "02:00", "meridiem": "PM" },
+      { "meal_name": "Dinner", "meal_time": "08:00", "meridiem": "PM" }
+    ],
+    "number_of_meals": 3,
+    "meal_style_option": "some_variety",
+    "treat_meals": {
+      "is_selected": true,
+      "entries": [{ "date": "2025-10-22", "meal_name": "Lunch" }]
+    },
+    "social_meals": { "is_selected": false, "entries": [] },
+    "is_drinks": true,
+    "drink_entries": [
+      { "date": "2025-10-22", "meal_name": "Dinner", "number_of_drinks": "1-2" }
+    ],
+    "macro_target": {
+      "calories": 2128.5,
+      "carbs": 212.85,
+      "fats": 70.95,
+      "proteins": 159.64
+    },
+    "diet_type": "Flexible",
+    "cuisines": [],
+    "foods_to_avoid": ["Almonds"],
+    "kitchen_tools": [
+      "Blender",
+      "Food Processor",
+      "Slow Cooker",
+      "Instant Pot/Pressure Cooker",
+      "Air Fryer",
+      "Stove Top",
+      "Oven",
+      "Toaster Oven",
+      "Grill",
+      "Steamer",
+      "Waffle Maker"
+    ],
+    "life_phases": ["None of these apply"],
+    "foods_to_like": []
+  }
+]

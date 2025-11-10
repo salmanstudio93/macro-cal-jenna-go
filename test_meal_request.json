@@ -1,0 +1,34 @@
+{
+  "dates": ["2024-01-15"],
+  "meals": [
+    {
+      "meal_name": "Breakfast",
+      "meal_time": "8:00",
+      "meridiem": "AM"
+    }
+  ],
+  "number_of_meals": 1,
+  "meal_style_option": "balanced",
+  "treat_meals": {
+    "is_selected": false,
+    "entries": []
+  },
+  "social_meals": {
+    "is_selected": false,
+    "entries": []
+  },
+  "is_drinks": false,
+  "drink_entries": [],
+  "macro_target": {
+    "calories": 500,
+    "carbs": 60,
+    "proteins": 25,
+    "fats": 20
+  },
+  "diet_type": "balanced",
+  "cuisines": [],
+  "foods_to_avoid": [],
+  "kitchen_tools": [],
+  "life_phases": [],
+  "foods_to_like": []
+}

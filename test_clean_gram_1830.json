@@ -1,0 +1,67 @@
+{
+  "dates": ["2025-10-22"],
+  "meals": [
+    {
+      "meal_name": "Breakfast",
+      "meal_time": "09:00",
+      "meridiem": "AM"
+    },
+    {
+      "meal_name": "Lunch",
+      "meal_time": "02:00",
+      "meridiem": "PM"
+    },
+    {
+      "meal_name": "Dinner",
+      "meal_time": "08:00",
+      "meridiem": "PM"
+    }
+  ],
+  "number_of_meals": 3,
+  "meal_style_option": "some_variety",
+  "treat_meals": {
+    "is_selected": true,
+    "entries": [
+      {
+        "date": "2025-10-22",
+        "meal_name": "Lunch"
+      }
+    ]
+  },
+  "social_meals": {
+    "is_selected": false,
+    "entries": []
+  },
+  "is_drinks": true,
+  "drink_entries": [
+    {
+      "date": "2025-10-22",
+      "meal_name": "Dinner",
+      "number_of_drinks": "1-2"
+    }
+  ],
+  "macro_target": {
+    "calories": 1830,
+    "carbs": 183,
+    "fats": 61,
+    "proteins": 137.25
+  },
+  "diet_type": "Flexible",
+  "cuisines": [],
+  "foods_to_avoid": ["Almonds"],
+  "kitchen_tools": [
+    "Blender",
+    "Food Processor",
+    "Slow Cooker",
+    "Instant Pot/Pressure Cooker",
+    "Air Fryer",
+    "Stove Top",
+    "Oven",
+    "Toaster Oven",
+    "Grill",
+    "Steamer",
+    "Waffle Maker"
+  ],
+  "life_phases": ["None of these apply"],
+  "foods_to_like": []
+}
