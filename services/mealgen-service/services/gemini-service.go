@@ -613,7 +613,7 @@ func (gs *GeminiService) buildSingleMealPrompt(reqBody models.RequestBody, day s
 	prompt += "}\n\n"
 	prompt += "IMPORTANT:\n"
 	prompt += "- Return ONLY valid JSON, no additional text\n"
-	prompt += "- Include 4-6 diverse foods\n"
+	prompt += "- Use as many food items as needed to fulfill macro targets - there is NO restriction on the number of foods per meal\n"
 	prompt += "- Ensure macro targets are achievable with the suggested foods\n"
 	prompt += "- Prioritize whole, unprocessed foods\n"
 	prompt += "- Consider the user's preferences and restrictions\n"
