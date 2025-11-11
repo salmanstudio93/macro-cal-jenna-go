@@ -173,10 +173,12 @@ func (gs *GeminiService) buildMealPrompt(reqBody models.RequestBody) string {
 
 	prompt += "\nTASK:\n"
 	prompt += fmt.Sprintf("Create a meal plan for %d days with %d meals per day.\n", len(dates), mealsPerDay)
-	prompt += "Each meal MUST include 4-6 foods that align with the user's diet type and goals.\n"
+	prompt += "Each meal should include foods that align with the user's diet type and goals.\n"
+	prompt += "There is NO restriction on the number of food items - use as many foods as needed to fulfill the macro targets.\n"
 	prompt += "For each food, specify the portion ratio (percentage) it should represent in the meal.\n"
 	prompt += "CRITICAL: The portion ratios should be calculated to help achieve the per-meal macro targets.\n"
-	prompt += "Focus on whole, unprocessed foods that provide balanced nutrition.\n\n"
+	prompt += "Focus on whole, unprocessed foods that provide balanced nutrition.\n"
+	prompt += "RESTRICT MULTI-INGREDIENT FOODS: Avoid foods with multiple ingredients (processed foods, packaged items, complex recipes). Use single-ingredient whole foods instead.\n\n"
 
 	prompt += "MEAL GENERATION RULES:\n"
 	prompt += "1. UNIVERSAL MEAL STRUCTURE (4-Component Rule):\n"
@@ -219,6 +221,9 @@ func (gs *GeminiService) buildMealPrompt(reqBody models.RequestBody) string {
 	prompt += "7. CRITICAL RULES:\n"
 	prompt += "   - 50/50 Carb Split: ALWAYS split carbs 50% starchy / 50% fruit-vegetable\n"
 	prompt += "   - Whole-Food Fat Priority: Use nuts, seeds, avocado, nut butters BEFORE oils\n"
+	prompt += "   - NO OILS OR CONDIMENTS: DO NOT include any oils (olive oil, vegetable oil, coconut oil, etc.) or condiments (ketchup, mustard, mayonnaise, etc.) in meals\n"
+	prompt += "   - RESTRICT MULTI-INGREDIENT FOODS: Avoid foods with multiple ingredients (processed foods, packaged items, complex recipes). Use single-ingredient whole foods only\n"
+	prompt += "   - NO FOOD COUNT RESTRICTION: Use as many food items as needed to fulfill macro targets - there is no limit on the number of foods per meal\n"
 	prompt += "   - Protein/Fat Balancing: If high-fat protein reaches fat limit before protein target, add low-fat protein source\n"
 	prompt += "   - Breakfast Foods Enforcement: Breakfast meals = breakfast foods ONLY\n"
 	prompt += "   - Grams Only: All portions in grams (never cups, oz, tbsp)\n"
@@ -314,7 +319,7 @@ func (gs *GeminiService) buildMealPrompt(reqBody models.RequestBody) string {
 	prompt += "            {\"name\": \"Salmon\", \"portion_ratio\": 40},\n"
 	prompt += "            {\"name\": \"Sweet Potato\", \"portion_ratio\": 30},\n"
 	prompt += "            {\"name\": \"Spinach\", \"portion_ratio\": 15},\n"
-	prompt += "            {\"name\": \"Olive Oil\", \"portion_ratio\": 15}\n"
+	prompt += "            {\"name\": \"Avocado\", \"portion_ratio\": 15}\n"
 	prompt += "          ]\n"
 	prompt += "        }\n"
 	prompt += "      ]\n"
@@ -337,7 +342,7 @@ func (gs *GeminiService) buildMealPrompt(reqBody models.RequestBody) string {
 	prompt += "      \"steps\": [\n"
 	prompt += "        \"Batch cook legumes, oats, pasta, rice, potatoes\",\n"
 	prompt += "        \"Use rice cooker for convenience\",\n"
-	prompt += "        \"Roast potatoes at 400°F with oil, salt, pepper\"\n"
+	prompt += "        \"Roast potatoes at 400°F with salt and pepper\"\n"
 	prompt += "      ]\n"
 	prompt += "    },\n"
 	prompt += "    {\n"
@@ -346,7 +351,7 @@ func (gs *GeminiService) buildMealPrompt(reqBody models.RequestBody) string {
 	prompt += "      \"steps\": [\n"
 	prompt += "        \"Use whole-food fats: avocado, nuts, seeds, nut butters\",\n"
 	prompt += "        \"Protein-with-fat options: salmon, trout, steak\",\n"
-	prompt += "        \"Use oils sparingly\"\n"
+	prompt += "        \"NO oils or condiments - whole foods only\"\n"
 	prompt += "      ]\n"
 	prompt += "    }\n"
 	prompt += "  ],\n"
@@ -367,7 +372,7 @@ func (gs *GeminiService) buildMealPrompt(reqBody models.RequestBody) string {
 	prompt += "      \"steps\": [\n"
 	prompt += "        \"Pasta boils for ~12 minutes al dente\",\n"
 	prompt += "        \"Rice & grains: use 2:1 water-to-grain ratio in rice cooker\",\n"
-	prompt += "        \"Oven potatoes: toss with oil, salt, pepper; bake at 400°F for ~35-40 minutes\",\n"
+	prompt += "        \"Oven potatoes: season with salt and pepper; bake at 400°F for ~35-40 minutes\",\n"
 	prompt += "        \"Air-fryer potatoes: 400°F for ~15-20 min\"\n"
 	prompt += "      ]\n"
 	prompt += "    },\n"
@@ -448,7 +453,10 @@ func (gs *GeminiService) buildMealPrompt(reqBody models.RequestBody) string {
 	prompt += "- ENFORCE 50/50 CARB SPLIT: Half starchy carbs, half fruits/vegetables\n"
 	prompt += "- USE BREAKFAST FOODS ONLY for breakfast meals\n"
 	prompt += "- SPECIFY GRAMS AND COOKED/RAW for all portions\n"
-	prompt += "- PRIORITIZE WHOLE-FOOD FATS over oils\n\n"
+	prompt += "- PRIORITIZE WHOLE-FOOD FATS over oils\n"
+	prompt += "- DO NOT INCLUDE OILS OR CONDIMENTS: Never add oils (olive oil, vegetable oil, coconut oil, etc.) or condiments (ketchup, mustard, mayonnaise, etc.) to meals\n"
+	prompt += "- RESTRICT MULTI-INGREDIENT FOODS: Avoid foods with multiple ingredients (processed foods, packaged items, complex recipes). Use single-ingredient whole foods only\n"
+	prompt += "- NO FOOD COUNT RESTRICTION: Use as many food items as needed to fulfill macro targets - there is no limit on the number of foods per meal\n\n"
 
 	prompt += "Create the meal plan now:"
 
@@ -574,6 +582,9 @@ func (gs *GeminiService) buildSingleMealPrompt(reqBody models.RequestBody, day s
 	prompt += "7. CRITICAL RULES:\n"
 	prompt += "   - 50/50 Carb Split: ALWAYS split carbs 50% starchy / 50% fruit-vegetable\n"
 	prompt += "   - Whole-Food Fat Priority: Use nuts, seeds, avocado, nut butters BEFORE oils\n"
+	prompt += "   - NO OILS OR CONDIMENTS: DO NOT include any oils (olive oil, vegetable oil, coconut oil, etc.) or condiments (ketchup, mustard, mayonnaise, etc.) in meals\n"
+	prompt += "   - RESTRICT MULTI-INGREDIENT FOODS: Avoid foods with multiple ingredients (processed foods, packaged items, complex recipes). Use single-ingredient whole foods only\n"
+	prompt += "   - NO FOOD COUNT RESTRICTION: Use as many food items as needed to fulfill macro targets - there is no limit on the number of foods per meal\n"
 	prompt += "   - Protein/Fat Balancing: If high-fat protein reaches fat limit before protein target, add low-fat protein source\n"
 	prompt += "   - Breakfast Foods Enforcement: Breakfast meals = breakfast foods ONLY\n"
 	prompt += "   - Grams Only: All portions in grams (never cups, oz, tbsp)\n"
@@ -723,12 +734,13 @@ func (gs *GeminiService) buildRegenerationPrompt(reqBody models.RegenerationRequ
 	} else {
 		prompt += "\nREGENERATION REQUEST:\n"
 		prompt += "Regenerate the entire meal with different foods while maintaining the EXACT same macro targets.\n"
-		prompt += "Keep the same meal structure (4-6 foods) and nutritional balance.\n"
+		prompt += "Use as many foods as needed to fulfill macro targets - there is NO restriction on the number of food items.\n"
+		prompt += "Maintain proper nutritional balance with protein, carb, and fat sources.\n"
 	}
 
 	prompt += "\nCRITICAL REQUIREMENTS:\n"
 	prompt += "1. MACRO TARGETS MUST BE IDENTICAL: Use the exact same macro targets as the original meal\n"
-	prompt += "2. MEAL STRUCTURE: Maintain 4-6 foods with proper component distribution\n"
+	prompt += "2. MEAL STRUCTURE: Use as many foods as needed to fulfill macro targets - there is NO restriction on the number of food items\n"
 	prompt += "3. NUTRITIONAL BALANCE: Ensure protein, carb, and fat sources are well-distributed\n\n"
 
 	prompt += "MEAL GENERATION RULES:\n"
@@ -754,6 +766,12 @@ func (gs *GeminiService) buildRegenerationPrompt(reqBody models.RegenerationRequ
 	prompt += "   - ALL portions MUST be in GRAMS ONLY (never cups, ounces, tablespoons)\n"
 	prompt += "   - Specify (cooked) or (raw) for meats, grains, starchy vegetables\n"
 	prompt += "   - Examples: '150g chicken breast (cooked)', '185g brown rice (cooked)', '200g sweet potato (raw)'\n\n"
+
+	prompt += "5. CRITICAL RESTRICTIONS:\n"
+	prompt += "   - NO OILS OR CONDIMENTS: DO NOT include any oils (olive oil, vegetable oil, coconut oil, etc.) or condiments (ketchup, mustard, mayonnaise, etc.) in meals\n"
+	prompt += "   - RESTRICT MULTI-INGREDIENT FOODS: Avoid foods with multiple ingredients (processed foods, packaged items, complex recipes). Use single-ingredient whole foods only\n"
+	prompt += "   - Use whole-food fats only: avocado, nuts, seeds, nut butters, cheese\n"
+	prompt += "   - NO FOOD COUNT RESTRICTION: Use as many food items as needed to fulfill macro targets - there is no limit on the number of foods per meal\n\n"
 
 	prompt += "RESPONSE FORMAT:\n"
 	prompt += "Return ONLY a valid JSON object in this exact structure:\n"
@@ -878,11 +896,13 @@ func (gs *GeminiService) buildRegenerationPrompt(reqBody models.RegenerationRequ
 	prompt += fmt.Sprintf("- Use EXACTLY these macro targets: Calories=%.1f, Protein=%.1fg, Carbs=%.1fg, Fat=%.1fg\n",
 		reqBody.OriginalMeal.MacroTarget.Calories, reqBody.OriginalMeal.MacroTarget.Proteins,
 		reqBody.OriginalMeal.MacroTarget.Carbs, reqBody.OriginalMeal.MacroTarget.Fats)
-	prompt += "- Use 4-6 foods with realistic portion ratios\n"
+	prompt += "- Use as many foods as needed with realistic portion ratios - there is NO restriction on the number of food items\n"
 	prompt += "- FOLLOW THE 4-COMPONENT RULE: Every meal must have protein, starchy carb, fruit/vegetable, and fat\n"
 	prompt += "- ENFORCE 50/50 CARB SPLIT: Half starchy carbs, half fruits/vegetables\n"
 	prompt += "- SPECIFY GRAMS AND COOKED/RAW for all portions\n"
-	prompt += "- PRIORITIZE WHOLE-FOOD FATS over oils\n\n"
+	prompt += "- PRIORITIZE WHOLE-FOOD FATS over oils\n"
+	prompt += "- DO NOT INCLUDE OILS OR CONDIMENTS: Never add oils (olive oil, vegetable oil, coconut oil, etc.) or condiments (ketchup, mustard, mayonnaise, etc.) to meals\n"
+	prompt += "- RESTRICT MULTI-INGREDIENT FOODS: Avoid foods with multiple ingredients (processed foods, packaged items, complex recipes). Use single-ingredient whole foods only\n\n"
 
 	prompt += "Regenerate the meal now:"
 
@@ -949,7 +969,7 @@ func (gs *GeminiService) createStructuredResponse(response string, reqBody model
 				Steps: []string{
 					"Batch cook legumes, oats, pasta, rice, potatoes",
 					"Use rice cooker for convenience",
-					"Roast potatoes at 400°F with oil, salt, pepper",
+					"Roast potatoes at 400°F with salt and pepper",
 				},
 			},
 			{
@@ -958,7 +978,7 @@ func (gs *GeminiService) createStructuredResponse(response string, reqBody model
 				Steps: []string{
 					"Use whole-food fats: avocado, nuts, seeds, nut butters",
 					"Protein-with-fat options: salmon, trout, steak",
-					"Use oils sparingly",
+					"NO oils or condiments - whole foods only",
 				},
 			},
 		},
@@ -978,7 +998,7 @@ func (gs *GeminiService) createStructuredResponse(response string, reqBody model
 				Steps: []string{
 					"Pasta boils for ~12 minutes al dente",
 					"Rice & grains: use 2:1 water-to-grain ratio in rice cooker",
-					"Oven potatoes: toss with oil, salt, pepper; bake at 400°F for ~35-40 minutes",
+					"Oven potatoes: season with salt and pepper; bake at 400°F for ~35-40 minutes",
 				},
 			},
 			{

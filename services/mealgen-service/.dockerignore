@@ -14,8 +14,13 @@ debug/
 
 # Build artifacts
 main
+mealgen-service
 tmp/
 *.log
+*.exe
+
+# Development scripts
+*.sh
 
 # IDE files
 .vscode/
