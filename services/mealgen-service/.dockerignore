@@ -12,10 +12,18 @@ test_*.json
 test_*.sh
 debug/
 
+# Development scripts
+check-env.sh
+setup-env.sh
+deploy*.sh
+docker-helper.sh
+
 # Build artifacts
 main
+mealgen-service
 tmp/
 *.log
+*.exe
 
 # IDE files
 .vscode/
