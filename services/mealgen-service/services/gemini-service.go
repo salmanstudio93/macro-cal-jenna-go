@@ -59,6 +59,15 @@ func (gs *GeminiService) GenerateMeals(reqBody models.RequestBody) (*models.Meal
 	return gs.parseMealResponse(response, reqBody)
 }
 
+func (gs *GeminiService) GenerateSingleMeal(reqBody models.RequestBody, day string, mealName string, mealTime string, meridiem string, previousMeals []models.MealLLMItems) (*models.MealLLMItems, error) {
+	prompt := gs.buildSingleMealPrompt(reqBody, day, mealName, mealTime, meridiem, previousMeals)
+	response, err := gs.prompt(prompt)
+	if err != nil {
+		return nil, fmt.Errorf("error calling Gemini API: %v", err)
+	}
+	return gs.parseSingleMealResponse(response, reqBody, day, mealName, mealTime, meridiem)
+}
+
 func (gs *GeminiService) RegenerateMeal(reqBody models.RegenerationRequest) (*models.RegenerationLLMResponse, error) {
 	prompt := gs.buildRegenerationPrompt(reqBody)
 	response, err := gs.prompt(prompt)
@@ -444,6 +453,237 @@ func (gs *GeminiService) buildMealPrompt(reqBody models.RequestBody) string {
 	prompt += "Create the meal plan now:"
 
 	return prompt
+}
+
+func (gs *GeminiService) buildSingleMealPrompt(reqBody models.RequestBody, day string, mealName string, mealTime string, meridiem string, previousMeals []models.MealLLMItems) string {
+	prompt := "You are a professional nutritionist and meal planning expert. Create a single high-quality meal based on the user's requirements.\n\n"
+
+	// Parse meals per day
+	mealsPerDay := 3
+	if reqBody.MealsPerDay != "" {
+		if parsed, err := strconv.Atoi(reqBody.MealsPerDay); err == nil {
+			mealsPerDay = parsed
+		}
+	}
+
+	prompt += "USER PROFILE:\n"
+	if reqBody.Name != "" {
+		prompt += fmt.Sprintf("- Name: %s\n", reqBody.Name)
+	}
+	if reqBody.Age > 0 {
+		prompt += fmt.Sprintf("- Age: %d years\n", reqBody.Age)
+	}
+	if reqBody.Gender != "" {
+		prompt += fmt.Sprintf("- Gender: %s\n", reqBody.Gender)
+	}
+	if reqBody.Weight > 0 {
+		prompt += fmt.Sprintf("- Weight: %d kg\n", reqBody.Weight)
+	}
+	if reqBody.Height > 0 {
+		prompt += fmt.Sprintf("- Height: %d cm\n", reqBody.Height)
+	}
+	if reqBody.Goal != "" {
+		prompt += fmt.Sprintf("- Goal: %s\n", reqBody.Goal)
+	}
+	if reqBody.ActivityLevel != "" {
+		prompt += fmt.Sprintf("- Activity Level: %s\n", reqBody.ActivityLevel)
+	}
+	prompt += fmt.Sprintf("- Diet Type: %s\n", reqBody.DietType)
+	prompt += "\n"
+
+	// Add context from previous meals to avoid repetition
+	if len(previousMeals) > 0 {
+		prompt += "PREVIOUS MEALS (AVOID REPEATING THESE FOODS):\n"
+		usedFoods := make(map[string]bool)
+		for _, prevMeal := range previousMeals {
+			for _, food := range prevMeal.Foods {
+				if !usedFoods[food.Name] {
+					prompt += fmt.Sprintf("- %s (used in %s)\n", food.Name, prevMeal.MealName)
+					usedFoods[food.Name] = true
+				}
+			}
+		}
+		prompt += "\n"
+	}
+
+	prompt += "CURRENT MEAL TO GENERATE:\n"
+	prompt += fmt.Sprintf("- Day: %s\n", day)
+	prompt += fmt.Sprintf("- Meal Name: %s\n", mealName)
+	prompt += fmt.Sprintf("- Meal Time: %s %s\n", mealTime, meridiem)
+	prompt += "\n"
+
+	prompt += "MACRO TARGETS FOR THIS MEAL:\n"
+	prompt += fmt.Sprintf("- Calories: %.1f\n", reqBody.DailyCaloriesGoal/float64(mealsPerDay))
+	prompt += fmt.Sprintf("- Protein: %.1fg\n", reqBody.DailyProtiensGoal/float64(mealsPerDay))
+	prompt += fmt.Sprintf("- Carbs: %.1fg\n", reqBody.DailyCarbsGoal/float64(mealsPerDay))
+	prompt += fmt.Sprintf("- Fats: %.1fg\n", reqBody.DailyFatsGoal/float64(mealsPerDay))
+	prompt += "\n"
+
+	if len(reqBody.FoodAllergies) > 0 {
+		prompt += fmt.Sprintf("ALLERGIES/FOODS TO AVOID: %s\n", strings.Join(reqBody.FoodAllergies, ", "))
+	}
+	if len(reqBody.FoodLikes) > 0 {
+		prompt += fmt.Sprintf("FOOD PREFERENCES (PRIORITIZE): %s\n", strings.Join(reqBody.FoodLikes, ", "))
+	}
+	if len(reqBody.SelectedHealthConditions) > 0 {
+		prompt += fmt.Sprintf("HEALTH CONDITIONS: %s\n", strings.Join(reqBody.SelectedHealthConditions, ", "))
+	}
+	if len(reqBody.SelectedLifeStages) > 0 {
+		prompt += fmt.Sprintf("LIFE STAGES: %s\n", strings.Join(reqBody.SelectedLifeStages, ", "))
+	}
+	prompt += "\n"
+
+	prompt += "MEAL GENERATION RULES:\n"
+	prompt += "1. UNIVERSAL MEAL STRUCTURE (4-Component Rule):\n"
+	prompt += "   - Component 1: Protein Source (chicken, fish, beef, turkey, eggs, Greek yogurt, tofu)\n"
+	prompt += "   - Component 2: Starchy Carbohydrate (50% of meal carbs) - rice, oats, potatoes, sweet potatoes, pasta, quinoa, bread, corn\n"
+	prompt += "   - Component 3: Fruit or Vegetable (50% of meal carbs) - berries, apples, bananas, broccoli, peppers, spinach, mixed greens, carrots, tomatoes\n"
+	prompt += "   - Component 4: Fat Source (whole-food priority: avocado, nuts, seeds, nut butters, cheese)\n\n"
+
+	prompt += "2. MACRO DISTRIBUTION:\n"
+	prompt += "   - Daily: 40% Carbs | 30% Protein | 30% Fat (fat target MUST be met)\n"
+	prompt += "   - Per-Meal: Divide daily targets by number of meals\n"
+	prompt += "   - CRITICAL: Split carbs 50% starchy / 50% fruit-vegetable\n"
+	prompt += "   - If fat is under target after protein/carb planning, add a whole-food fat component to reach the fat target.\n\n"
+
+	prompt += "3. HIERARCHICAL PLANNING:\n"
+	prompt += "   - STEP 1: Plan carbohydrate sources first (50/50 split)\n"
+	prompt += "   - STEP 2: Plan protein sources second\n"
+	prompt += "   - STEP 3: Complete with fat source if needed (always include a fat component)\n\n"
+
+	prompt += "4. BREAKFAST FOODS (for breakfast meals only):\n"
+	prompt += "   - Eggs, dairy (Greek yogurt, cottage cheese, milk, cheese)\n"
+	prompt += "   - Grains: Oats, cereals, granola, whole wheat bread, English muffins\n"
+	prompt += "   - Proteins: Turkey bacon, Canadian bacon, breakfast sausage\n"
+	prompt += "   - Fruits: Any fruits (berries, bananas, apples, etc.)\n"
+	prompt += "   - Other: Avocado, nut butters, nuts, seeds, protein powder\n\n"
+
+	prompt += "5. PORTION SPECIFICATIONS:\n"
+	prompt += "   - ALL portions MUST be in GRAMS ONLY (never cups, ounces, tablespoons)\n"
+	prompt += "   - Specify (cooked) or (raw) for meats, grains, starchy vegetables\n"
+	prompt += "   - Examples: '150g chicken breast (cooked)', '185g brown rice (cooked)', '200g sweet potato (raw)'\n\n"
+
+	prompt += "6. DIETARY RESTRICTIONS:\n"
+	prompt += "   - Vegetarian: No meat or fish\n"
+	prompt += "   - Vegan: No animal products (meat, fish, dairy, eggs)\n"
+	prompt += "   - Pescatarian: Fish only, no other meat\n"
+	prompt += "   - Paleo: Whole foods, no grains, dairy, or legumes\n"
+	prompt += "   - Gluten-Free: No wheat, barley, rye\n"
+	prompt += "   - Dairy-Free: No milk products\n\n"
+
+	prompt += "7. CRITICAL RULES:\n"
+	prompt += "   - 50/50 Carb Split: ALWAYS split carbs 50% starchy / 50% fruit-vegetable\n"
+	prompt += "   - Whole-Food Fat Priority: Use nuts, seeds, avocado, nut butters BEFORE oils\n"
+	prompt += "   - Protein/Fat Balancing: If high-fat protein reaches fat limit before protein target, add low-fat protein source\n"
+	prompt += "   - Breakfast Foods Enforcement: Breakfast meals = breakfast foods ONLY\n"
+	prompt += "   - Grams Only: All portions in grams (never cups, oz, tbsp)\n"
+	prompt += "   - Cooked/Raw Required: All meats, grains, starchy veggies MUST specify cooked/raw\n\n"
+
+	prompt += "VARIETY & REALISM:\n"
+	prompt += "- Do not repeat any foods from the previous meals list above.\n"
+	prompt += "- Avoid repeating the same primary protein for the same meal name on consecutive days.\n"
+	prompt += "- Use realistic combinations from different cuisines.\n\n"
+
+	prompt += "RESPONSE FORMAT (JSON ONLY):\n"
+	prompt += "{\n"
+	prompt += "  \"success\": true,\n"
+	prompt += "  \"message\": \"Meal created\",\n"
+	prompt += "  \"data\": {\n"
+	prompt += fmt.Sprintf("    \"meal_name\": \"%s\",\n", mealName)
+	prompt += fmt.Sprintf("    \"meal_time\": \"%s\",\n", mealTime)
+	prompt += fmt.Sprintf("    \"meridiem\": \"%s\",\n", meridiem)
+	prompt += "    \"foods\": [\n"
+	prompt += "      {\"name\": \"Food Name 1\", \"portion_ratio\": 40},\n"
+	prompt += "      {\"name\": \"Food Name 2\", \"portion_ratio\": 30},\n"
+	prompt += "      {\"name\": \"Food Name 3\", \"portion_ratio\": 20},\n"
+	prompt += "      {\"name\": \"Food Name 4\", \"portion_ratio\": 10}\n"
+	prompt += "    ]\n"
+	prompt += "  }\n"
+	prompt += "}\n\n"
+	prompt += "IMPORTANT:\n"
+	prompt += "- Return ONLY valid JSON, no additional text\n"
+	prompt += "- Include 4-6 diverse foods\n"
+	prompt += "- Ensure macro targets are achievable with the suggested foods\n"
+	prompt += "- Prioritize whole, unprocessed foods\n"
+	prompt += "- Consider the user's preferences and restrictions\n"
+
+	return prompt
+}
+
+func (gs *GeminiService) parseSingleMealResponse(response string, reqBody models.RequestBody, day string, mealName string, mealTime string, meridiem string) (*models.MealLLMItems, error) {
+	cleanedResponse := gs.cleanLLMResponse(response)
+
+	var mealResponse struct {
+		Success bool   `json:"success"`
+		Message string `json:"message"`
+		Data    struct {
+			MealName string                   `json:"meal_name"`
+			MealTime string                   `json:"meal_time"`
+			Meridiem string                   `json:"meridiem"`
+			Foods    []models.FoodWithPortion `json:"foods"`
+		} `json:"data"`
+	}
+
+	if err := json.Unmarshal([]byte(cleanedResponse), &mealResponse); err != nil {
+		log.Printf("Failed to parse single meal JSON: %v", err)
+		// Return default meal
+		return &models.MealLLMItems{
+			MealName: mealName,
+			MealTime: mealTime,
+			Meridiem: meridiem,
+			Foods:    gs.getDefaultFoodsForMeal(mealName, reqBody.DietType, reqBody.FoodAllergies),
+		}, nil
+	}
+
+	// Calculate macro targets per meal
+	mealsPerDay := 3
+	if reqBody.MealsPerDay != "" {
+		if parsed, err := strconv.Atoi(reqBody.MealsPerDay); err == nil {
+			mealsPerDay = parsed
+		}
+	}
+
+	// Deduplicate foods from Gemini response (same logic as cleanFoodsArrays)
+	unique := make(map[string]bool)
+	var deduped []models.FoodWithPortion
+	for _, fw := range mealResponse.Data.Foods {
+		name := strings.TrimSpace(strings.ToLower(fw.Name))
+		if name == "" || unique[name] {
+			continue // Skip empty or duplicate foods
+		}
+		unique[name] = true
+		deduped = append(deduped, fw)
+	}
+
+	// Pad with defaults if needed to ensure at least 4 unique foods
+	if len(deduped) < 4 {
+		defaults := gs.getDefaultFoodsForMeal(mealName, reqBody.DietType, reqBody.FoodAllergies)
+		for _, df := range defaults {
+			if len(deduped) >= 4 {
+				break
+			}
+			lname := strings.TrimSpace(strings.ToLower(df.Name))
+			if !unique[lname] {
+				unique[lname] = true
+				deduped = append(deduped, df)
+			}
+		}
+	}
+
+	meal := models.MealLLMItems{
+		MealName: mealName,
+		MealTime: mealTime,
+		Meridiem: meridiem,
+		MacroTarget: models.MacroTarget{
+			Calories: reqBody.DailyCaloriesGoal / float64(mealsPerDay),
+			Carbs:    reqBody.DailyCarbsGoal / float64(mealsPerDay),
+			Proteins: reqBody.DailyProtiensGoal / float64(mealsPerDay),
+			Fats:     reqBody.DailyFatsGoal / float64(mealsPerDay),
+		},
+		Foods: deduped, // Use deduplicated foods
+	}
+
+	return &meal, nil
 }
 
 func (gs *GeminiService) buildRegenerationPrompt(reqBody models.RegenerationRequest) string {

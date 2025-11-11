@@ -941,45 +941,120 @@ func generateProgramSSEPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate the meal plan
-	log.Println("🔄 Calling Gemini API...")
-	response, err := geminiService.GenerateMeals(reqBody)
-	if err != nil {
-		log.Printf("❌ Error from Gemini API: %v", err)
-		fmt.Fprintf(w, "data: Error: %v\n\n", err)
-		flusher.Flush()
-		return
+	// Parse meals per day
+	mealsPerDay := 3
+	if reqBody.MealsPerDay != "" {
+		if parsed, err := strconv.Atoi(reqBody.MealsPerDay); err == nil {
+			mealsPerDay = parsed
+		}
 	}
 
-	log.Println("✅ Gemini API response received")
-	result := swapFoodItems(*response)
+	// Define meal schedule (supports up to 6 meals per day)
+	mealSchedule := []struct {
+		name     string
+		time     string
+		meridiem string
+	}{
+		{"Breakfast", "07:00", "AM"},
+		{"Mid-Morning Snack", "10:00", "AM"},
+		{"Lunch", "13:00", "PM"},
+		{"Afternoon Snack", "16:00", "PM"},
+		{"Dinner", "19:00", "PM"},
+		{"Evening Snack", "21:00", "PM"},
+	}
 
-	log.Println("🚀 Starting to stream meal data...")
-	// Stream the data for each day
-	for dayKey, dayData := range result.Data {
-		// Send DAY_START marker
+	if mealsPerDay > len(mealSchedule) {
+		mealsPerDay = len(mealSchedule) // Cap at 6 meals max
+	}
+
+	log.Printf("🚀 Starting TRUE meal-by-meal generation (7 days × %d meals = %d total Gemini calls)...", mealsPerDay, mealsPerDay*7)
+
+	// Track all previous meals for variety
+	var allPreviousMeals []models.MealLLMItems
+
+	// Generate 7 days
+	for day := 1; day <= 7; day++ {
+		dayName := fmt.Sprintf("Day %d", day)
+		log.Printf("📅 %s - Starting...", dayName)
+
+		// Send DAY_START marker immediately (activates tab)
 		fmt.Fprintf(w, "data: <DAY_START>\n\n")
 		flusher.Flush()
 
-		// Stream each meal
-		for _, meal := range dayData.Meals {
+		// Generate each meal ONE AT A TIME
+		for mealIdx := 0; mealIdx < mealsPerDay; mealIdx++ {
+			mealInfo := mealSchedule[mealIdx]
+			log.Printf("  🔄 Generating %s - %s...", dayName, mealInfo.name)
+
 			// Send MEAL_START marker
 			fmt.Fprintf(w, "data: <MEAL_START>\n\n")
 			flusher.Flush()
 
-			// Create a single meal response
-			mealResponse := map[string]interface{}{
-				"day":   dayKey,
-				"meals": []models.MealAPIItems{meal},
-			}
-
-			// Send the meal data as JSON
-			mealJSON, err := json.Marshal(mealResponse)
+			// Generate THIS SINGLE MEAL with previous meal context
+			meal, err := geminiService.GenerateSingleMeal(reqBody, dayName, mealInfo.name, mealInfo.time, mealInfo.meridiem, allPreviousMeals)
 			if err != nil {
-				log.Printf("Error marshaling meal: %v", err)
-				continue
+				log.Printf("  ❌ Error: %v", err)
+				meal = &models.MealLLMItems{
+					MealName: mealInfo.name,
+					MealTime: mealInfo.time,
+					Meridiem: mealInfo.meridiem,
+					MacroTarget: models.MacroTarget{
+						Calories: reqBody.DailyCaloriesGoal / float64(mealsPerDay),
+						Carbs:    reqBody.DailyCarbsGoal / float64(mealsPerDay),
+						Proteins: reqBody.DailyProtiensGoal / float64(mealsPerDay),
+						Fats:     reqBody.DailyFatsGoal / float64(mealsPerDay),
+					},
+					Foods: []models.FoodWithPortion{
+						{Name: "Oatmeal", PortionRatio: 40},
+						{Name: "Banana", PortionRatio: 30},
+						{Name: "Almonds", PortionRatio: 20},
+						{Name: "Blueberries", PortionRatio: 10},
+					},
+				}
 			}
 
+			log.Printf("  ✅ Generated, fetching food nutrition...")
+
+			// Fetch food data for THIS meal
+			uniqueFoods := make(map[string]bool)
+			for _, foodWithPortion := range meal.Foods {
+				uniqueFoods[foodWithPortion.Name] = true
+			}
+			foodResults := batchFetchFoods(uniqueFoods)
+
+			// Build foods list with nutrition data
+			foods := make([]models.Food, 0, len(meal.Foods))
+			for _, foodWithPortion := range meal.Foods {
+				if food, exists := foodResults[foodWithPortion.Name]; exists && food != nil {
+					food.Servings = filterGramServings(food.Servings)
+					if len(food.Servings) > 0 {
+						food.Servings[0] = ensureServingFields(food.Servings[0], food.Servings)
+					}
+					foods = append(foods, *food)
+				}
+			}
+
+			// Optimize portions
+			optimizedFoods := adjustServingsByPortionRatio(foods, meal.Foods, meal.MacroTarget.Calories)
+			optimizedFoods = rebalanceMealFoods(optimizedFoods, meal.MacroTarget)
+			totalMacros := calculateMealMacros(optimizedFoods)
+
+			// Create final meal
+			finalMeal := models.MealAPIItems{
+				MealName:    meal.MealName,
+				MealTime:    meal.MealTime,
+				Meridiem:    meal.Meridiem,
+				MacroTarget: meal.MacroTarget,
+				Macros:      totalMacros,
+				Foods:       optimizedFoods,
+			}
+
+			// Send meal to client
+			mealResponse := map[string]interface{}{
+				"day":   dayName,
+				"meals": []models.MealAPIItems{finalMeal},
+			}
+			mealJSON, _ := json.Marshal(mealResponse)
 			fmt.Fprintf(w, "data: %s\n\n", string(mealJSON))
 			flusher.Flush()
 
@@ -987,19 +1062,22 @@ func generateProgramSSEPostHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "data: <MEAL_END>\n\n")
 			flusher.Flush()
 
-			// Small delay between meals for better UX
-			time.Sleep(100 * time.Millisecond)
+			log.Printf("  ✅ Sent %s - %s to client!", dayName, mealInfo.name)
+
+			// Add to previous meals for variety tracking
+			allPreviousMeals = append(allPreviousMeals, *meal)
 		}
 
 		// Send DAY_END marker
 		fmt.Fprintf(w, "data: <DAY_END>\n\n")
 		flusher.Flush()
+		log.Printf("✅ %s complete!", dayName)
 	}
 
 	// Send completion marker
 	fmt.Fprintf(w, "data: <MEAL_PLAN_END>\n\n")
 	flusher.Flush()
-	log.Println("✅ Streaming completed")
+	log.Printf("🎉 All %d meals generated!", mealsPerDay*7)
 }
 
 func corsPreflightHandler(w http.ResponseWriter, r *http.Request) {
