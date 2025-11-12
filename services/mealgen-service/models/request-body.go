@@ -36,14 +36,18 @@ type RequestBody struct {
 	GroceryAvailability string   `json:"grocery_availability"`
 	Supplements         []string `json:"supplements"`
 
+	// Meal Schedule - Dynamic meal names and times (optional)
+	MealSchedule []MealScheduleItem `json:"meal_schedule,omitempty"`
+
 	// Optional fields for backward compatibility
 	Dates         []string `json:"dates,omitempty"`
 	NumberOfMeals int      `json:"number_of_meals,omitempty"`
 }
 
-type Meal struct {
-	MealName string `json:"meal_name"`
-	MealTime string `json:"meal_time"`
+// MealScheduleItem represents a single meal's schedule information
+type MealScheduleItem struct {
+	Name     string `json:"name"`
+	Time     string `json:"time"`
 	Meridiem string `json:"meridiem"`
 }
 

@@ -949,22 +949,27 @@ func generateProgramSSEPostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Define meal schedule (supports up to 6 meals per day)
-	mealSchedule := []struct {
-		name     string
-		time     string
-		meridiem string
-	}{
-		{"Breakfast", "07:00", "AM"},
-		{"Mid-Morning Snack", "10:00", "AM"},
-		{"Lunch", "13:00", "PM"},
-		{"Afternoon Snack", "16:00", "PM"},
-		{"Dinner", "19:00", "PM"},
-		{"Evening Snack", "21:00", "PM"},
+	// Get meal schedule from request or use default schedule
+	var mealSchedule []models.MealScheduleItem
+	if len(reqBody.MealSchedule) > 0 {
+		// Use custom meal schedule from request
+		mealSchedule = reqBody.MealSchedule
+		log.Printf("📋 Using custom meal schedule with %d meals", len(mealSchedule))
+	} else {
+		// Use default meal schedule (supports up to 6 meals per day)
+		mealSchedule = []models.MealScheduleItem{
+			{Name: "Breakfast", Time: "07:00", Meridiem: "AM"},
+			{Name: "Mid-Morning Snack", Time: "10:00", Meridiem: "AM"},
+			{Name: "Lunch", Time: "13:00", Meridiem: "PM"},
+			{Name: "Afternoon Snack", Time: "16:00", Meridiem: "PM"},
+			{Name: "Dinner", Time: "19:00", Meridiem: "PM"},
+			{Name: "Evening Snack", Time: "21:00", Meridiem: "PM"},
+		}
+		log.Printf("📋 Using default meal schedule")
 	}
 
 	if mealsPerDay > len(mealSchedule) {
-		mealsPerDay = len(mealSchedule) // Cap at 6 meals max
+		mealsPerDay = len(mealSchedule) // Cap at available meals
 	}
 
 	log.Printf("🚀 Starting TRUE meal-by-meal generation (7 days × %d meals = %d total Gemini calls)...", mealsPerDay, mealsPerDay*7)
@@ -984,20 +989,20 @@ func generateProgramSSEPostHandler(w http.ResponseWriter, r *http.Request) {
 		// Generate each meal ONE AT A TIME
 		for mealIdx := 0; mealIdx < mealsPerDay; mealIdx++ {
 			mealInfo := mealSchedule[mealIdx]
-			log.Printf("  🔄 Generating %s - %s...", dayName, mealInfo.name)
+			log.Printf("  🔄 Generating %s - %s...", dayName, mealInfo.Name)
 
 			// Send MEAL_START marker
 			fmt.Fprintf(w, "data: <MEAL_START>\n\n")
 			flusher.Flush()
 
 			// Generate THIS SINGLE MEAL with previous meal context
-			meal, err := geminiService.GenerateSingleMeal(reqBody, dayName, mealInfo.name, mealInfo.time, mealInfo.meridiem, allPreviousMeals)
+			meal, err := geminiService.GenerateSingleMeal(reqBody, dayName, mealInfo.Name, mealInfo.Time, mealInfo.Meridiem, allPreviousMeals)
 			if err != nil {
 				log.Printf("  ❌ Error: %v", err)
 				meal = &models.MealLLMItems{
-					MealName: mealInfo.name,
-					MealTime: mealInfo.time,
-					Meridiem: mealInfo.meridiem,
+					MealName: mealInfo.Name,
+					MealTime: mealInfo.Time,
+					Meridiem: mealInfo.Meridiem,
 					MacroTarget: models.MacroTarget{
 						Calories: reqBody.DailyCaloriesGoal / float64(mealsPerDay),
 						Carbs:    reqBody.DailyCarbsGoal / float64(mealsPerDay),
@@ -1062,7 +1067,7 @@ func generateProgramSSEPostHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "data: <MEAL_END>\n\n")
 			flusher.Flush()
 
-			log.Printf("  ✅ Sent %s - %s to client!", dayName, mealInfo.name)
+			log.Printf("  ✅ Sent %s - %s to client!", dayName, mealInfo.Name)
 
 			// Add to previous meals for variety tracking
 			allPreviousMeals = append(allPreviousMeals, *meal)
@@ -1105,28 +1110,21 @@ func init() {
 	once.Do(func() {
 		log.Println("Initializing mealgen-service...")
 
-		// Try to load .env file (optional for Cloud Run)
+		// Load environment variables from .env file
 		if err := godotenv.Load(); err != nil {
 			log.Printf("Warning: Failed to load .env file: %v (this is normal for Cloud Run)", err)
 		}
 
-		// TODO: Replace these with your actual API keys
-		geminiApiKey := "AIzaSyD7C2E3682Avm36w7OynNP_4j9DaX8tXTw"                        // Add your Gemini API key here
-		foodApiKey := "83b88a97d33c889f3fa582d1d190d53b2655a72da9353465f70fbaaa18d498a0" // Add your Food API key here
+		// Get API keys from environment variables
+		geminiApiKey := os.Getenv("GEMINI_API_KEY")
+		foodApiKey := os.Getenv("FOOD_API_KEY")
 
-		// Fallback to environment variables if not hardcoded
-		if geminiApiKey == "YOUR_GEMINI_API_KEY_HERE" {
-			geminiApiKey = os.Getenv("GEMINI_API_KEY")
+		// Validate required API keys
+		if geminiApiKey == "" {
+			log.Fatal("❌ GEMINI_API_KEY is required! Please add it to your .env file or set as environment variable")
 		}
-		if foodApiKey == "YOUR_FOOD_API_KEY_HERE" {
-			foodApiKey = os.Getenv("FOOD_API_KEY")
-		}
-
-		if geminiApiKey == "" || geminiApiKey == "YOUR_GEMINI_API_KEY_HERE" {
-			log.Fatal("GEMINI_API_KEY is required - add it directly in main.go or use .env file")
-		}
-		if foodApiKey == "" || foodApiKey == "YOUR_FOOD_API_KEY_HERE" {
-			log.Fatal("FOOD_API_KEY is required - add it directly in main.go or use .env file")
+		if foodApiKey == "" {
+			log.Fatal("❌ FOOD_API_KEY is required! Please add it to your .env file or set as environment variable")
 		}
 
 		log.Println("Environment variables validated successfully")
