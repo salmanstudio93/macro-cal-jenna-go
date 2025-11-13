@@ -1027,28 +1027,21 @@ func init() {
 	once.Do(func() {
 		log.Println("Initializing mealgen-service...")
 
-		// Try to load .env file (optional for Cloud Run)
+		// Load environment variables from .env file
 		if err := godotenv.Load(); err != nil {
 			log.Printf("Warning: Failed to load .env file: %v (this is normal for Cloud Run)", err)
 		}
 
-		// TODO: Replace these with your actual API keys
-		geminiApiKey := "AIzaSyD7C2E3682Avm36w7OynNP_4j9DaX8tXTw"                        // Add your Gemini API key here
-		foodApiKey := "83b88a97d33c889f3fa582d1d190d53b2655a72da9353465f70fbaaa18d498a0" // Add your Food API key here
+		// Get API keys from environment variables
+		geminiApiKey := os.Getenv("GEMINI_API_KEY")
+		foodApiKey := os.Getenv("FOOD_API_KEY")
 
-		// Fallback to environment variables if not hardcoded
-		if geminiApiKey == "YOUR_GEMINI_API_KEY_HERE" {
-			geminiApiKey = os.Getenv("GEMINI_API_KEY")
+		// Validate required API keys
+		if geminiApiKey == "" {
+			log.Fatal("❌ GEMINI_API_KEY is required! Please add it to your .env file or set as environment variable")
 		}
-		if foodApiKey == "YOUR_FOOD_API_KEY_HERE" {
-			foodApiKey = os.Getenv("FOOD_API_KEY")
-		}
-
-		if geminiApiKey == "" || geminiApiKey == "YOUR_GEMINI_API_KEY_HERE" {
-			log.Fatal("GEMINI_API_KEY is required - add it directly in main.go or use .env file")
-		}
-		if foodApiKey == "" || foodApiKey == "YOUR_FOOD_API_KEY_HERE" {
-			log.Fatal("FOOD_API_KEY is required - add it directly in main.go or use .env file")
+		if foodApiKey == "" {
+			log.Fatal("❌ FOOD_API_KEY is required! Please add it to your .env file or set as environment variable")
 		}
 
 		log.Println("Environment variables validated successfully")

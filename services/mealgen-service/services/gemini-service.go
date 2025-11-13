@@ -430,6 +430,16 @@ func (gs *GeminiService) buildMealPrompt(reqBody models.RequestBody) string {
 	prompt += "- Do NOT change or modify the dates - use them exactly as provided\n"
 	prompt += "- Do NOT add extra dates beyond what was requested\n"
 	prompt += "- Generate meals ONLY for the specified dates, no more, no less\n"
+	prompt += fmt.Sprintf("- GENERATE %d MEALS PER DAY with contextual names based on timing\n", mealsPerDay)
+	if reqBody.EatingWindow != "" {
+		prompt += fmt.Sprintf("- CRITICAL: ALL meal times MUST be within eating window: %s\n", reqBody.EatingWindow)
+		prompt += "- Calculate meal times by dividing the eating window evenly\n"
+	}
+	if reqBody.PreferredMealTimes != "" {
+		prompt += fmt.Sprintf("- Use these preferred meal times if provided: %s\n", reqBody.PreferredMealTimes)
+	}
+	prompt += "- MEAL TIMES MUST BE DYNAMIC: Calculate based on eating window, NOT fixed at 08:00, 13:00, 19:00\n"
+	prompt += "- MEAL NAMES MUST BE CONTEXTUAL: Name meals based on their time (Breakfast at 7 AM, Dinner at 7 PM, etc.)\n"
 	prompt += "- Calculate portion ratios to help achieve the per-meal macro targets\n"
 	prompt += "- Consider protein content for muscle building, carbs for energy, fats for satiety\n"
 	prompt += "- Use realistic, healthy food combinations\n"
@@ -437,7 +447,7 @@ func (gs *GeminiService) buildMealPrompt(reqBody models.RequestBody) string {
 	prompt += "- Consider the user's diet type and restrictions\n"
 	prompt += "- FOLLOW THE 4-COMPONENT RULE: Every meal must have protein, starchy carb, fruit/vegetable, and fat\n"
 	prompt += "- ENFORCE 50/50 CARB SPLIT: Half starchy carbs, half fruits/vegetables\n"
-	prompt += "- USE BREAKFAST FOODS ONLY for breakfast meals\n"
+	prompt += "- USE BREAKFAST FOODS ONLY for early morning meals (breakfast time)\n"
 	prompt += "- SPECIFY GRAMS AND COOKED/RAW for all portions\n"
 	prompt += "- PRIORITIZE WHOLE-FOOD FATS over oils\n\n"
 
